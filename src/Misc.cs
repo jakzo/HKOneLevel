@@ -6,10 +6,10 @@ class Misc {
   public Misc(OneLevel mod) { _mod = mod; }
 
   public void Initialize() {
-    _mod.ChunkLoader.OnChunkLoad += InitializeChunk;
+    _mod.ChunkLoader.OnSceneInit += InitializeScene;
 
     // Do not draw scene borders because they cover neighboring scenes
-    // TODO: Delete existing borders
+    // TODO: Delete existing borders/restore on unload
     On.SceneManager.DrawBlackBorders += OnDrawBlackBorders;
 
     // Particles are next to the camera and obscure the world
@@ -33,42 +33,43 @@ class Misc {
   }
 
   public void Unload() {
-    _mod.ChunkLoader.OnChunkLoad -= InitializeChunk;
+    _mod.ChunkLoader.OnSceneInit -= InitializeScene;
     On.SceneManager.DrawBlackBorders -= OnDrawBlackBorders;
     On.SceneParticlesController.EnableParticles -= OnEnableParticles;
 
-    // The vignette stops us seeing the rest of the world so remove it
-    // TODO: What to do about dark areas?
-    HeroController.instance.vignette.gameObject.SetActive(false);
+    HeroController.instance.vignette.gameObject.SetActive(true);
 
-    // Move the hero along with the scene it was in
     if (_mod.ChunkLoader.CurrentChunk != null) {
-      HeroController.instance.transform.localPosition +=
+      HeroController.instance.transform.localPosition -=
           _mod.ChunkLoader.CurrentChunk.Position + ChunkLoader.WORLD_OFFSET;
     }
 
-    // The killplane kills NPCs in other chunks so just remove it
-    // TODO: Put killplane below lowest chunk and resize to cover all chunks?
     GameManager.instance.gameObject.GetComponentInChildren<KillOnContact>()
-        ?.gameObject.SetActive(false);
+        ?.gameObject.SetActive(true);
 
-    if (_mod.IsInGameplay()) {
-      RestoreChunk(USceneManager.GetActiveScene());
+    if (_mod.IsInGameplay() && _mod.ChunkLoader.LoadedChunks.TryGetValue(
+                                   _mod.ChunkLoader.CurrentChunk, out var cs)) {
+      foreach (var scene in cs.Scenes) {
+        if (scene.IsValid()) {
+          RestoreScene(scene);
+        }
+      }
     }
   }
 
-  public void InitializeChunk(ChunkState cs) {
-    foreach (var obj in cs.Scene.GetRootGameObjects()) {
+  public void InitializeScene(Scene scene) {
+    // TODO: Hook OnEnter instead
+    foreach (var obj in scene.GetRootGameObjects()) {
       foreach (var cla in obj.GetComponentsInChildren<CameraLockArea>()) {
         cla.gameObject.SetActive(false);
       }
     }
   }
 
-  public void RestoreChunk(Scene scene) {
+  public void RestoreScene(Scene scene) {
     foreach (var obj in scene.GetRootGameObjects()) {
       foreach (var cla in obj.GetComponentsInChildren<CameraLockArea>()) {
-        cla.gameObject.SetActive(false);
+        cla.gameObject.SetActive(true);
       }
     }
   }

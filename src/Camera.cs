@@ -6,6 +6,7 @@ class Camera {
   public float Zoom = 2f;
 
   private readonly OneLevel _mod;
+  private GameObject _decoupled;
 
   public Camera(OneLevel mod) { _mod = mod; }
 
@@ -17,6 +18,8 @@ class Camera {
 
     On.LightBlurredBackground.UpdateCameraClipPlanes +=
         OnUpdateCameraClipPlanes;
+
+    DecoupleFromCamera();
 
     // TODO: On scene entry set camera position to knight
   }
@@ -53,14 +56,17 @@ class Camera {
     SetCameraPosition(Zoom);
   }
 
+  // TODO: Fix camera flickering
   public void SetCameraPosition(float zoom) {
     var newCamZ = -((zoom - 2f) * INITIAL_CAM_OFFSET);
     var cam = GameCameras.instance.cameraParent;
+    var camPos = cam.localPosition;
     if (newCamZ != cam.localPosition.z) {
-      cam.localPosition =
-          new Vector3(cam.localPosition.x, cam.localPosition.y, newCamZ);
-      // TODO: Move audio listener to original cam position?
+      cam.localPosition = new Vector3(camPos.x, camPos.y, newCamZ);
     }
+
+    _decoupled.transform.localPosition =
+        new Vector3(camPos.x, camPos.y, _decoupled.transform.localPosition.z);
   }
 
   public void RemoveLimits() {
@@ -78,6 +84,22 @@ class Camera {
     var camTarget = GameCameras.instance.cameraTarget;
     camTarget.xLockMin = camTarget.yLockMin = float.NegativeInfinity;
     camTarget.xLockMax = camTarget.yLockMax = float.PositiveInfinity;
+  }
+
+  public void DecoupleFromCamera() {
+    _decoupled = new GameObject("OneLevel_OriginalCameraPosition");
+    _decoupled.transform.SetParent(GameCameras.instance.cameraParent, false);
+    _decoupled.transform.localPosition =
+        tk2dCamera.Instance.transform.localPosition;
+
+    UObject.Destroy(tk2dCamera.Instance.GetComponent<AudioListener>());
+    _decoupled.AddComponent<AudioListener>();
+  }
+
+  public void RecoupleToCamera() {
+    UObject.Destroy(_decoupled);
+
+    tk2dCamera.Instance.gameObject.AddComponent<AudioListener>();
   }
 
   private void OnLockToArea(On.CameraController.orig_LockToArea orig,

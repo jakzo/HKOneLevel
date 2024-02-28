@@ -4,7 +4,7 @@ param (
 
 $process = Get-Process "Hollow Knight" -ErrorAction SilentlyContinue
 if ($process) {
-    taskkill /IM "Hollow Knight.exe" /F
+    taskkill /IM "Hollow Knight.exe"
+    Start-Sleep -Seconds 3
 }
-Start-Sleep -Seconds 1
 & "$HollowKnightPath\Hollow Knight.exe"

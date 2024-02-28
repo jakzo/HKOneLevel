@@ -50,16 +50,13 @@
     <Copy Condition="'$(DocumentationFile)' == ''" SourceFiles="ReadMe.md;$(TargetPath);$(TargetDir)/$(TargetName).pdb" DestinationFolder="$(ExportDir)/zip/" />
     <ZipDirectory SourceDirectory="$(ExportDir)/zip" DestinationFile="$(ExportDir)/$(TargetName).zip" />
     <RemoveDir Directories="$(ExportDir)/zip" />
-    <PropertyGroup>
-      <OutputFileString>$(AssemblyVersion)</OutputFileString>
-    </PropertyGroup>
-    <WriteLinesToFile File="Version.txt" Lines="$(OutputFileString)" Overwrite="true" Encoding="UTF-8" />
+    <WriteLinesToFile File="Version.txt" Lines="$(AssemblyVersion)" Overwrite="true" Encoding="UTF-8" />
   </Target>
   <Target Condition="'$(Configuration)' == 'Debug'" Name="CopyMod" AfterTargets="PostBuildEvent">
     <RemoveDir Condition="Exists('$(ModsPath)/$(TargetName)')" Directories="$(ModsPath)/$(TargetName)" />
     <MakeDir Directories="$(ModsPath)/$(TargetName)" />
     <Copy SourceFiles="$(TargetPath);$(TargetDir)/$(TargetName).pdb" DestinationFolder="$(ModsPath)/$(TargetName)" />
-    <Exec Command="powershell -File &quot;RestartHollowKnight.ps1&quot; -HollowKnightPath &quot;$(HollowKnightPath)&quot;" />
+    <Exec Command="powershell -File RestartHollowKnight.ps1 -HollowKnightPath &quot;$(HollowKnightPath)&quot;" />
   </Target>
   <ItemGroup>
     <Reference Include="Assembly-CSharp">
@@ -332,9 +329,5 @@
     <Reference Include="UnityEngine.XRModule">
       <HintPath>$(LocalRefs)/UnityEngine.XRModule.dll</HintPath>
     </Reference>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include=".gitignore" />
-    <None Include="ReadMe.md" />
   </ItemGroup>
 </Project>

@@ -8,6 +8,7 @@ global using System.Reflection;
 global using System.Diagnostics;
 global using UnityEngine;
 global using UnityEngine.SceneManagement;
+
 global using UObject = UnityEngine.Object;
 global using UCamera = UnityEngine.Camera;
 global using USceneManager = UnityEngine.SceneManagement.SceneManager;

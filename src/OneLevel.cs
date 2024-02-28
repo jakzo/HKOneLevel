@@ -5,14 +5,17 @@ class OneLevel : Mod, IGlobalSettings<Settings>, ITogglableMod {
 
   public Settings Settings = new();
   public Camera Camera { get; private set; }
+  public BossScenes BossScenes { get; private set; }
   public Misc Misc { get; private set; }
   public ChunkLoader ChunkLoader { get; private set; }
   public bool IsStarted = false;
+  public bool DisableTransitions = false;
 
   public OneLevel() : base("OneLevel") {
     Instance = this;
     Camera = new(this);
     Misc = new(this);
+    BossScenes = new(this);
     ChunkLoader = new(this);
   }
 
@@ -25,25 +28,39 @@ class OneLevel : Mod, IGlobalSettings<Settings>, ITogglableMod {
   public override void Initialize() {
     var sceneName = GameManager._instance?.sceneName;
     if (IsInChunkedArea(sceneName)) {
-      Start(sceneName);
+      Start();
     }
 
     On.SceneLoad.ctor += OnSceneLoad;
+    On.GameManager.ReturnToMainMenu += OnReturnToMainMenu;
+
+#if DEBUG
+    OneLevelDebug.Initialize();
+#endif
   }
 
   public void Unload() {
     Stop();
 
     On.SceneLoad.ctor -= OnSceneLoad;
+    On.GameManager.ReturnToMainMenu -= OnReturnToMainMenu;
+
+#if DEBUG
+    OneLevelDebug.Unload();
+#endif
   }
 
-  public void Start(string currentSceneName) {
+  public void Start() {
     if (IsStarted)
       return;
     IsStarted = true;
 
-    ChunkLoader.Initialize(currentSceneName);
+    DisableTransitions = Settings.Beta_DisableTransitions;
+    Logger.LogDebug($"DisableTransitions {DisableTransitions}");
+
+    ChunkLoader.Initialize();
     Camera.Initialize();
+    BossScenes.Initialize();
     Misc.Initialize();
   }
 
@@ -52,9 +69,10 @@ class OneLevel : Mod, IGlobalSettings<Settings>, ITogglableMod {
       return;
     IsStarted = false;
 
-    ChunkLoader.Unload();
-    Camera.Unload();
     Misc.Unload();
+    BossScenes.Unload();
+    Camera.Unload();
+    ChunkLoader.Unload();
   }
 
   public Settings OnSaveGlobal() => Settings;
@@ -85,42 +103,29 @@ class OneLevel : Mod, IGlobalSettings<Settings>, ITogglableMod {
     orig(self, runner, targetSceneName);
 
     Utils.Try(() => {
-      LogDebug($"SceneLoad.ctor {self.TargetSceneName}");
+      LogDebug($"SceneLoad: {self.TargetSceneName}");
       self.ActivationComplete += () => {
-        try {
+        Utils.Try("OneLevel.OnSceneLoad.ActivationComplete", () => {
           if (IsInChunkedArea(targetSceneName)) {
             LogDebug("IsInChunkedArea");
-            Start(targetSceneName);
+            Start();
           } else {
             LogDebug("NOT IsInChunkedArea");
             Stop();
           }
-        } catch (Exception ex) {
-          LogError("Error in OneLevel.OnSceneLoad.ActivationComplete:");
-          LogError(ex);
-        }
+        });
       };
     });
   }
 
-  public void TestSetChunkPos(string sceneName, Vector3 pos) {
-    ChunkLoader.ChunkMap.TryGetValue(sceneName, out var chunk);
-    if (chunk == null) {
-      Log("Could not find chunk, creating...");
-      chunk = new Chunk() {
-        SceneName = sceneName,
-        Position = pos,
-      };
-    }
-    ChunkLoader.LoadedChunks.TryGetValue(chunk, out var cs);
-    if (cs == null) {
-      ChunkLoader.InitializeChunkState(chunk);
-    } else {
-      var oldChunkPos = chunk.Position;
-      chunk.Position = pos;
-      foreach (var obj in cs.Scene.GetRootGameObjects()) {
-        obj.transform.localPosition += pos - oldChunkPos;
-      }
-    }
+  public IEnumerator OnReturnToMainMenu(
+      On.GameManager.orig_ReturnToMainMenu orig, GameManager self,
+      GameManager.ReturnToMainMenuSaveModes saveMode, Action<bool> callback) {
+    Utils.Try(() => {
+      LogDebug("OnReturnToMainMenu");
+      Stop();
+    });
+
+    return orig(self, saveMode, callback);
   }
 }
