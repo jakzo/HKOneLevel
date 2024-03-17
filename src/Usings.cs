@@ -6,6 +6,7 @@ global using System.Collections.Generic;
 global using System.Linq;
 global using System.Reflection;
 global using System.Diagnostics;
+global using System.Runtime.CompilerServices;
 global using UnityEngine;
 global using UnityEngine.SceneManagement;
 
