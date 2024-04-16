@@ -1,13 +1,54 @@
 namespace OneLevel;
 
-class Chunk {
+public class Chunk {
   public string SceneName;
   public Vector3 Position;
   public Rect[] Colliders;
   public Action<Scene> OnLoad;
+}
 
-  public static readonly Dictionary<string, Chunk> HALLOWNEST =
-      new Chunk[] {
+class ChunkState {
+  public Chunk Chunk;
+  public Scene MainScene;
+  public List<Scene> Scenes;
+
+  public ChunkState(Chunk chunk, Scene mainScene) {
+    Chunk = chunk;
+    MainScene = mainScene;
+    Scenes = new List<Scene> { mainScene };
+  }
+}
+
+public class ChunkMap {
+  public static Dictionary<string, ChunkMap> BySceneName = new();
+
+  public static void Register(ChunkMap chunkMap) {
+    foreach (var chunk in chunkMap.Chunks) {
+      BySceneName.Add(chunk.SceneName, chunkMap);
+    }
+  }
+
+  public static ChunkMap CreateAndRegister(List<Chunk> chunks) {
+    var chunkMap = new ChunkMap(chunks);
+    Register(chunkMap);
+    return chunkMap;
+  }
+
+  public List<Chunk> Chunks;
+  public Dictionary<string, Chunk> ChunkBySceneName;
+
+  public ChunkMap(List<Chunk> chunks) {
+    Chunks = chunks;
+    ChunkBySceneName = chunks.ToDictionary(chunk => chunk.SceneName);
+  }
+
+  public void Add(Chunk chunk) {
+    Chunks.Add(chunk);
+    ChunkBySceneName.Add(chunk.SceneName, chunk);
+  }
+
+  public static readonly ChunkMap HALLOWNEST =
+      CreateAndRegister(new List<Chunk>() {
         // Dirtmouth
         new() {
           SceneName = "Town",
@@ -121,6 +162,5 @@ class Chunk {
           SceneName = "Crossroads_47",
           Position = new(199f, -104f),
         },
-      }
-          .ToDictionary(chunk => chunk.SceneName);
+      });
 }

@@ -6,7 +6,7 @@ class Misc {
   public Misc(OneLevel mod) { _mod = mod; }
 
   public void Initialize() {
-    _mod.ChunkLoader.OnSceneInit += InitializeScene;
+    _mod.SceneLoader.OnSceneInit += InitializeScene;
 
     // Do not draw scene borders because they cover neighboring scenes
     // TODO: Delete existing borders/restore on unload
@@ -21,9 +21,9 @@ class Misc {
     HeroController.instance.vignette.gameObject.SetActive(false);
 
     // Move the hero along with the scene it was in
-    if (_mod.ChunkLoader.CurrentChunk != null) {
+    if (_mod.SceneLoader.CurrentChunk != null) {
       HeroController.instance.transform.localPosition +=
-          _mod.ChunkLoader.CurrentChunk.Position + ChunkLoader.WORLD_OFFSET;
+          _mod.SceneLoader.CurrentChunk.Position + SceneLoader.WORLD_OFFSET;
     }
 
     // The killplane kills NPCs in other chunks so just remove it
@@ -33,28 +33,19 @@ class Misc {
   }
 
   public void Unload() {
-    _mod.ChunkLoader.OnSceneInit -= InitializeScene;
+    _mod.SceneLoader.OnSceneInit -= InitializeScene;
     On.SceneManager.DrawBlackBorders -= OnDrawBlackBorders;
     On.SceneParticlesController.EnableParticles -= OnEnableParticles;
 
     HeroController.instance.vignette.gameObject.SetActive(true);
 
-    if (_mod.ChunkLoader.CurrentChunk != null) {
+    if (_mod.SceneLoader.CurrentChunk != null) {
       HeroController.instance.transform.localPosition -=
-          _mod.ChunkLoader.CurrentChunk.Position + ChunkLoader.WORLD_OFFSET;
+          _mod.SceneLoader.CurrentChunk.Position + SceneLoader.WORLD_OFFSET;
     }
 
     GameManager.instance.gameObject.GetComponentInChildren<KillOnContact>()
         ?.gameObject.SetActive(true);
-
-    if (_mod.IsInGameplay() && _mod.ChunkLoader.LoadedChunks.TryGetValue(
-                                   _mod.ChunkLoader.CurrentChunk, out var cs)) {
-      foreach (var scene in cs.Scenes) {
-        if (scene.IsValid()) {
-          RestoreScene(scene);
-        }
-      }
-    }
   }
 
   public void InitializeScene(Scene scene) {
@@ -62,14 +53,6 @@ class Misc {
     foreach (var obj in scene.GetRootGameObjects()) {
       foreach (var cla in obj.GetComponentsInChildren<CameraLockArea>()) {
         cla.gameObject.SetActive(false);
-      }
-    }
-  }
-
-  public void RestoreScene(Scene scene) {
-    foreach (var obj in scene.GetRootGameObjects()) {
-      foreach (var cla in obj.GetComponentsInChildren<CameraLockArea>()) {
-        cla.gameObject.SetActive(true);
       }
     }
   }

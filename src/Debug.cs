@@ -18,20 +18,23 @@ static class OneLevelDebug {
 
   public static void MoveChunk(string sceneName, Vector3 pos) {
     var mod = OneLevel.OneLevel.Instance;
-    mod.ChunkLoader.ChunkMap.TryGetValue(sceneName, out var chunk);
+    mod.CurrentMap.ChunkBySceneName.TryGetValue(sceneName, out var chunk);
     if (chunk == null) {
       Logger.LogDebug($"Creating chunk because it did not exist: {sceneName}");
       chunk = new Chunk() {
         SceneName = sceneName,
         Position = pos,
       };
-      mod.ChunkLoader.ChunkMap.Add(sceneName, chunk);
+      mod.CurrentMap.Add(chunk);
     }
-    if (mod.ChunkLoader.LoadedChunks.TryGetValue(chunk, out var cs)) {
+    if (mod.SceneLoader.LoadedChunks.TryGetValue(sceneName, out var cs)) {
       MoveChunk(cs, pos);
     } else {
-      mod.ChunkLoader.LoadChunk(chunk);
       ChangedChunks.Add(chunk);
+      var op =
+          USceneManager.LoadSceneAsync(chunk.SceneName, LoadSceneMode.Additive);
+      op.completed += op => Utils.Try(
+          "DebugChunkLoad", () => mod.SceneLoader.OnChunkSceneLoaded(chunk));
     }
   }
 
@@ -40,7 +43,7 @@ static class OneLevelDebug {
     if (pos == oldChunkPos)
       return;
     cs.Chunk.Position = pos;
-    OneLevel.OneLevel.Instance.ChunkLoader.MoveChunk(cs, pos - oldChunkPos);
+    OneLevel.OneLevel.Instance.SceneLoader.MoveChunk(cs, pos - oldChunkPos);
     ChangedChunks.Add(cs.Chunk);
   }
 
@@ -91,8 +94,10 @@ static class OneLevelDebug {
         if (collider != null) {
           var sceneName = collider.gameObject.scene.name;
           var mod = OneLevel.OneLevel.Instance;
-          if (mod.ChunkLoader.ChunkMap.TryGetValue(sceneName, out var chunk) &&
-              mod.ChunkLoader.LoadedChunks.TryGetValue(chunk, out var cs)) {
+          if (mod.CurrentMap.ChunkBySceneName.TryGetValue(sceneName,
+                                                          out var chunk) &&
+              mod.SceneLoader.LoadedChunks.TryGetValue(chunk.SceneName,
+                                                       out var cs)) {
             Logger.LogDebug($"Dragging chunk = {cs.Chunk.SceneName}");
             DraggingChunk = cs;
             DragStartMouse = mousePos;
